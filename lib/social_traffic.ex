@@ -1,0 +1,2 @@
+defmodule SocialTraffic do
+end
