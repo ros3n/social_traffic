@@ -6,6 +6,7 @@ defmodule User do
   end
 
   def init({id, friends, logger}) do
+    setup_action(self())
     {:ok, %{id: id, friends: friends, logger: logger}}
   end
 
@@ -17,6 +18,13 @@ defmodule User do
   def handle_cast({:message, msg, from, visited}, state) do
     GenEvent.sync_notify(state.logger, {:log, "#{state.id} received message: \"#{msg}\" from #{from}"})
     react(msg, state.id, [self()|visited], state.friends, state.logger)
+    {:noreply, state}
+  end
+
+  def handle_cast(:action, state) do
+    GenEvent.sync_notify(state.logger, {:log, "#{state.id} created content"})
+    react("hello #{state.id}", state.id, [self()], state.friends, state.logger)
+    setup_action(self())
     {:noreply, state}
   end
 
@@ -39,5 +47,13 @@ defmodule User do
   defp send_message({msg, from, visited}, {id, pid}, logger) do
     GenEvent.sync_notify(logger, {:log, "#{from} sent message: \"#{msg}\" to #{id}"})
     GenServer.cast(pid, {:message, msg, from, visited})
+  end
+
+  defp setup_action(parent) do
+    timeout = :random.uniform(30) * 1000
+    spawn_link(fn ->
+      :timer.sleep(timeout)
+      GenServer.cast(parent, :action)
+    end)
   end
 end
