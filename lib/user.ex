@@ -1,33 +1,43 @@
 defmodule User do
-  def start_link(friends, timeout) do
-    spawn_link __MODULE__, :listen, [friends, timeout]
+  use GenServer
+
+  def start_link(id, friends, logger, opts \\ []) do
+    GenServer.start_link __MODULE__, {id, friends, logger}, opts
   end
 
-  def listen(friends, timeout) do
-    receive do
-      {:add_friend, friend} ->
-        listen [friend | friends], timeout
-      {:message, msg} ->
-        IO.puts "#{inspect self} received: #{msg}"
-        react friends, msg
-        listen friends, timeout
-    after
-      timeout ->
-        create_content friends
-        listen friends, timeout
-    end
+  def init({id, friends, logger}) do
+    {:ok, %{id: id, friends: friends, logger: logger}}
   end
 
-  defp react(friends, msg) do
-    mass_send friends, msg
+  def handle_cast({:add_friend, friend}, %{id: id, friends: friends, logger: logger}) do
+    GenEvent.sync_notify(logger, {:log, "#{id} became friends with #{inspect(friend)}"})
+    {:noreply, %{id: id, friends: [friend|friends], logger: logger}}
   end
 
-  defp create_content(friends) do
-    mass_send friends, "hello from #{inspect self}"
+  def handle_cast({:message, msg, from, visited}, state) do
+    GenEvent.sync_notify(state.logger, {:log, "#{state.id} received message: \"#{msg}\" from #{from}"})
+    react(msg, state.id, [self()|visited], state.friends, state.logger)
+    {:noreply, state}
   end
 
-  defp mass_send(recipients, msg) do
-    recipients |> Enum.filter(fn _el -> :random.uniform(100) > 60 end) |>
-    Enum.map(&(send(&1, {:message, msg})))
+  def handle_call(:logs, _from, state) do
+    logs = GenEvent.call(state.logger, LoggerHandler, :messages)
+    {:reply, logs, state}
+  end
+
+  defp react(msg, from, visited, friends, logger) do
+    recipients = friends
+    |> Enum.filter(fn {id, pid} -> !Enum.find_value(visited, &(&1 == pid)) end)
+    |> Enum.filter(fn _el -> :random.uniform(100) > 60 end)
+    broadcast {msg, from, visited}, recipients, logger
+  end
+
+  defp broadcast(message, recipients, logger) do
+    recipients |> Enum.map(&(send_message(message, &1, logger)))
+  end
+
+  defp send_message({msg, from, visited}, {id, pid}, logger) do
+    GenEvent.sync_notify(logger, {:log, "#{from} sent message: \"#{msg}\" to #{id}"})
+    GenServer.cast(pid, {:message, msg, from, visited})
   end
 end
