@@ -11,12 +11,17 @@ defmodule User do
   end
 
   def handle_cast({:add_friend, friend}, %{id: id, friends: friends, logger: logger}) do
-    GenEvent.sync_notify(logger, {:log, "#{id} became friends with #{inspect(friend)}"})
+    GenEvent.sync_notify(
+      logger, {:log, "#{id} became friends with #{inspect(friend)}"}
+    )
     {:noreply, %{id: id, friends: [friend|friends], logger: logger}}
   end
 
   def handle_cast({:message, msg, from, visited}, state) do
-    GenEvent.sync_notify(state.logger, {:log, "#{state.id} received message: \"#{msg}\" from #{from}"})
+    GenEvent.sync_notify(
+      state.logger,
+      {:log, "#{state.id} received message: \"#{msg}\" from #{from}"}
+    )
     react(msg, state.id, [self()|visited], state.friends, state.logger)
     {:noreply, state}
   end
@@ -45,7 +50,9 @@ defmodule User do
   end
 
   defp send_message({msg, from, visited}, {id, pid}, logger) do
-    GenEvent.sync_notify(logger, {:log, "#{from} sent message: \"#{msg}\" to #{id}"})
+    GenEvent.sync_notify(
+      logger, {:log, "#{from} sent message: \"#{msg}\" to #{id}"}
+    )
     GenServer.cast(pid, {:message, msg, from, visited})
   end
 
