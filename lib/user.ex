@@ -11,18 +11,18 @@ defmodule User do
   end
 
   def handle_cast({:add_friend, friend}, %{id: id, friends: friends, logger: logger}) do
-    GenEvent.sync_notify(logger, {:log, "#{id}, F, #{inspect(friend)}"})
+    GenEvent.sync_notify(logger, {:log, chrono_log("#{id}, F, #{inspect(friend)}")})
     {:noreply, %{id: id, friends: [friend|friends], logger: logger}}
   end
 
   def handle_cast({:message, msg, from, visited}, state) do
-    GenEvent.sync_notify(state.logger, {:log, "#{state.id}, R, \"#{msg}\", from: #{from}"})
+    GenEvent.sync_notify(state.logger, {:log, chrono_log("#{state.id}, R, \"#{msg}\", from: #{from}")})
     react(msg, state.id, [self()|visited], state.friends, state.logger)
     {:noreply, state}
   end
 
   def handle_cast(:action, state) do
-    GenEvent.sync_notify(state.logger, {:log, "#{state.id}, CC"})
+    GenEvent.sync_notify(state.logger, {:log, chrono_log("#{state.id}, CC")})
     react("hello #{state.id}", state.id, [self()], state.friends, state.logger)
     setup_action(self())
     {:noreply, state}
@@ -45,7 +45,7 @@ defmodule User do
   end
 
   defp send_message({msg, from, visited}, {id, pid}, logger) do
-    GenEvent.sync_notify(logger, {:log, "#{from}, S, \"#{msg}\", to: #{id}"})
+    GenEvent.sync_notify(logger, {:log, chrono_log("#{from}, S, \"#{msg}\", to: #{id}")})
     GenServer.cast(pid, {:message, msg, from, visited})
   end
 
@@ -55,5 +55,11 @@ defmodule User do
       :timer.sleep(timeout)
       GenServer.cast(parent, :action)
     end)
+  end
+
+  defp chrono_log(log) do
+    datetime = Timex.DateTime.now
+    {:ok, datetime_str} = Timex.format(datetime, "{ISO}")
+    datetime_str <> ", " <> log
   end
 end
