@@ -40,8 +40,8 @@ defmodule User do
 
   defp react(msg, from, visited, friends, logger) do
     recipients = friends
-    |> Enum.filter(fn {id, pid} -> !Enum.find_value(visited, &(&1 == pid)) end)
-    |> Enum.filter(fn _el -> :random.uniform(100) > 60 end)
+    |> Enum.filter(fn {_, pid} -> Enum.find_value(visited, &(&1 != pid)) end)
+    |> Enum.filter(fn _el -> :random.uniform(100) > 60 end)   # pytanie: czy ten random nie wykona się tu tylko raz...
     broadcast {msg, from, visited}, recipients, logger
   end
 
