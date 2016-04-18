@@ -1,5 +1,5 @@
 defmodule SocialTraffic do
-  @logger_cap 100
+  @logger_cap 10000
 
   def start(file) do
     {n, edges} = GraphReader.read(file)

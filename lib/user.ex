@@ -11,20 +11,20 @@ defmodule User do
   end
 
   def handle_cast({:add_friend, friend}, %{id: id, friends: friends, logger: logger}) do
-    GenEvent.sync_notify(logger, {:log, chrono_log("#{id}, F, #{inspect(friend)}")})
+    GenEvent.notify(logger, {:log, chrono_log("#{id}, F, #{inspect(friend)}")})
     {:noreply, %{id: id, friends: [friend|friends], logger: logger}}
   end
 
   def handle_cast({:message, msg, from, visited}, state) do
     msg_qual = rand_msg_qual
-    GenEvent.sync_notify(state.logger, {:log, chrono_log("#{state.id}, R, \"#{msg}\", from: #{from}")})
+    GenEvent.notify(state.logger, {:log, chrono_log("#{state.id}, R, \"#{msg}\", from: #{from}")})
     react(msg, msg_qual, state.id, [self()|visited], state.friends, state.logger)
     {:noreply, state}
   end
 
   def handle_cast(:action, state) do
     msg_qual = rand_msg_qual
-    GenEvent.sync_notify(state.logger, {:log, chrono_log("#{state.id}, CC, qual: #{msg_qual}")})
+    GenEvent.notify(state.logger, {:log, chrono_log("#{state.id}, CC, qual: #{msg_qual}")})
     react("hello #{state.id}", msg_qual, state.id, [self()], state.friends, state.logger)
     setup_action(self())
     {:noreply, state}
@@ -38,7 +38,7 @@ defmodule User do
   defp react(msg, msg_qual, from, visited, friends, logger) do
     recipients = friends
       |> Enum.filter(fn {_, pid} -> !Enum.find_value(visited, &(&1 == pid)) end)
-      |> Enum.filter(fn _el -> :random.uniform * msg_qual > 0.85 end)
+      |> Enum.filter(fn _el -> :random.uniform * msg_qual > 0.65 end)
     broadcast {msg, from, visited}, recipients, logger
   end
 
@@ -47,7 +47,7 @@ defmodule User do
   end
 
   defp send_message({msg, from, visited}, {id, pid}, logger) do
-    GenEvent.sync_notify(logger, {:log, chrono_log("#{from}, S, \"#{msg}\", to: #{id}")})
+    GenEvent.notify(logger, {:log, chrono_log("#{from}, S, \"#{msg}\", to: #{id}")})
     GenServer.cast(pid, {:message, msg, from, visited})
   end
 
