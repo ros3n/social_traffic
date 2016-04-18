@@ -16,14 +16,16 @@ defmodule User do
   end
 
   def handle_cast({:message, msg, from, visited}, state) do
+    msg_qual = rand_msg_qual
     GenEvent.sync_notify(state.logger, {:log, chrono_log("#{state.id}, R, \"#{msg}\", from: #{from}")})
-    react(msg, state.id, [self()|visited], state.friends, state.logger)
+    react(msg, msg_qual, state.id, [self()|visited], state.friends, state.logger)
     {:noreply, state}
   end
 
   def handle_cast(:action, state) do
-    GenEvent.sync_notify(state.logger, {:log, chrono_log("#{state.id}, CC")})
-    react("hello #{state.id}", state.id, [self()], state.friends, state.logger)
+    msg_qual = rand_msg_qual
+    GenEvent.sync_notify(state.logger, {:log, chrono_log("#{state.id}, CC, qual: #{msg_qual}")})
+    react("hello #{state.id}", msg_qual, state.id, [self()], state.friends, state.logger)
     setup_action(self())
     {:noreply, state}
   end
@@ -33,10 +35,10 @@ defmodule User do
     {:reply, logs, state}
   end
 
-  defp react(msg, from, visited, friends, logger) do
+  defp react(msg, msg_qual, from, visited, friends, logger) do
     recipients = friends
-    |> Enum.filter(fn {_, pid} -> !Enum.find_value(visited, &(&1 == pid)) end)
-    |> Enum.filter(fn _el -> :random.uniform(100) > 60 end)   # pytanie: czy ten random nie wykona się tu tylko raz...
+      |> Enum.filter(fn {_, pid} -> !Enum.find_value(visited, &(&1 == pid)) end)
+      |> Enum.filter(fn _el -> :random.uniform * msg_qual > 0.85 end)
     broadcast {msg, from, visited}, recipients, logger
   end
 
@@ -61,5 +63,9 @@ defmodule User do
     datetime = Timex.DateTime.now
     {:ok, datetime_str} = Timex.format(datetime, "{ISO}")
     datetime_str <> ", " <> log
+  end
+
+  defp rand_msg_qual do
+    :random.uniform / 2 + 0.5
   end
 end
