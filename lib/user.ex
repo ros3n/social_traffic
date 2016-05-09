@@ -60,9 +60,9 @@ defmodule User do
   end
 
   defp chrono_log(log) do
-    datetime = Timex.DateTime.now
-    {:ok, datetime_str} = Timex.format(datetime, "{ISO}")
-    datetime_str <> ", " <> log
+    timestamp = Timex.Time.now
+    unix = "#{Timex.to_unix(timestamp)}"
+    unix <> ", " <> log
   end
 
   defp rand_msg_qual do
