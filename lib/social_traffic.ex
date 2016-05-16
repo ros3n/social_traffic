@@ -11,22 +11,30 @@ defmodule SocialTraffic do
   def start(file) do
     {n, edges} = GraphReader.read(file)
               |> GraphReader.parse_input
-    user_refs = start_users(n, %{})
+    user_refs = init_users(n, %{})
+    IO.puts "Initialized #{n} users"
     add_friendships(edges, user_refs)
+    IO.puts "Added friendships"
+    start_users(user_refs)
+    IO.puts "Started users"
     user_refs
   end
 
-  def start_users(n, user_refs, logger_pid \\ nil)
+  def init_users(n, user_refs, logger_pid \\ nil)
 
-  def start_users(0, user_refs, _logger_pid) do
+  def init_users(0, user_refs, _logger_pid) do
     user_refs
   end
 
-  def start_users(n, user_refs, logger_pid) do
+  def init_users(n, user_refs, logger_pid) do
     logger_pid = start_logger(n, logger_pid)
     {:ok, pid} = User.start_link(n - 1, [], logger_pid)
     # IO.puts "#{n - 1}: #{inspect(pid)}"
-    start_users(n - 1, Map.put(user_refs, n - 1, pid), logger_pid)
+    init_users(n - 1, Map.put(user_refs, n - 1, pid), logger_pid)
+  end
+
+  def start_users(user_refs) do
+    Enum.each(user_refs, fn({n, pid}) -> GenServer.cast(pid, :start) end)
   end
 
   def add_friendships(edges, user_refs) do

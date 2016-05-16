@@ -6,12 +6,10 @@ defmodule User do
   end
 
   def init({id, friends, logger}) do
-    setup_action(self())
     {:ok, %{id: id, friends: friends, logger: logger}}
   end
 
   def handle_cast({:add_friend, friend}, %{id: id, friends: friends, logger: logger}) do
-    GenEvent.notify(logger, {:log, chrono_log("#{id}, F, #{inspect(friend)}")})
     {:noreply, %{id: id, friends: [friend|friends], logger: logger}}
   end
 
@@ -26,6 +24,11 @@ defmodule User do
     msg_qual = rand_msg_qual
     GenEvent.notify(state.logger, {:log, chrono_log("#{state.id}, CC, qual: #{msg_qual}")})
     react("hello #{state.id}", msg_qual, state.id, [self()], state.friends, state.logger)
+    setup_action(self())
+    {:noreply, state}
+  end
+
+  def handle_cast(:start, state) do
     setup_action(self())
     {:noreply, state}
   end
