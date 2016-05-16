@@ -1,6 +1,13 @@
 defmodule SocialTraffic do
   @logger_cap 10000
 
+  def main(input_file) do
+    start(input_file)
+    receive do
+      :exit -> "Exiting now!"
+    end
+  end
+
   def start(file) do
     {n, edges} = GraphReader.read(file)
               |> GraphReader.parse_input
@@ -48,11 +55,11 @@ defmodule SocialTraffic do
     pid
   end
 
-  defp start_logger(n, pid) when rem(n, @logger_cap) == 0 do
+  defp start_logger(n, _) when rem(n, @logger_cap) == 0 do
     start_logger(n, nil)
   end
 
-  defp start_logger(n, pid) do
+  defp start_logger(_, pid) do
     pid
   end
 end
