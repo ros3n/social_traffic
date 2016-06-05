@@ -15,14 +15,14 @@ defmodule User do
 
   def handle_cast({:message, msg, from, visited}, state) do
     msg_qual = rand_msg_qual
-    GenEvent.notify(state.logger, {:log, chrono_log("#{state.id}, R, \"#{msg}\", from: #{from}")})
-    react(msg, msg_qual, state.id, [self()|visited], state.friends, state.logger)
+    # GenEvent.notify(state.logger, {:log, chrono_log("#{state.id}, R, \"#{msg}\", from: #{from}")})
+    setup_reaction(msg, msg_qual, state.id, [self()|visited], state.friends, state.logger)
     {:noreply, state}
   end
 
   def handle_cast(:action, state) do
     msg_qual = rand_msg_qual
-    GenEvent.notify(state.logger, {:log, chrono_log("#{state.id}, CC, qual: #{msg_qual}")})
+    # GenEvent.notify(state.logger, {:log, chrono_log("#{state.id}, CC, qual: #{msg_qual}")})
     react("hello #{state.id}", msg_qual, state.id, [self()], state.friends, state.logger)
     setup_action(self())
     {:noreply, state}
@@ -46,12 +46,14 @@ defmodule User do
   end
 
   defp broadcast(message, recipients, logger) do
-    recipients |> Enum.map(&(send_message(message, &1, logger)))
+    stamp = :erlang.system_time
+    recipients |> Enum.map(&(send_message(message, &1, stamp)))
   end
 
-  defp send_message({msg, from, visited}, {id, pid}, logger) do
-    GenEvent.notify(logger, {:log, chrono_log("#{from}, S, \"#{msg}\", to: #{id}")})
+  defp send_message({msg, from, visited}, {id, pid}, stamp) do
+    # GenEvent.notify(logger, {:log, chrono_log("#{from}, S, \"#{msg}\", to: #{id}")})
     GenServer.cast(pid, {:message, msg, from, visited})
+    stamp
   end
 
   defp setup_action(parent) do
@@ -62,9 +64,16 @@ defmodule User do
     end)
   end
 
+  defp setup_reaction(msg, msg_qual, state_id, visited, friends, logger) do
+    timeout = (1 + :random.uniform(4)) * 1000
+    spawn_link(fn ->
+      :timer.sleep(timeout)
+      react(msg, msg_qual, state_id, visited, friends, logger)
+    end)
+  end
+
   defp chrono_log(log) do
-    timestamp = Timex.Time.now
-    unix = "#{Timex.to_unix(timestamp)}"
+    unix = "#{:erlang.system_time}"
     unix <> ", " <> log
   end
 
